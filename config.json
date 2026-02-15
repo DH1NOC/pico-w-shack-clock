@@ -1,0 +1,14 @@
+{
+    "wifi": [
+        {
+            "ssid": "MEIN_WLAN",
+            "password": "PASSWORT1"
+        },
+        {
+            "ssid": "BACKUP_WLAN",
+            "password": "PASSWORT2"
+        }
+    ],
+    "ntp_server": "pool.ntp.org",
+    "sync_interval_min": 60
+}
