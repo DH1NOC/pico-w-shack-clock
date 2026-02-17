@@ -1,6 +1,6 @@
 """
 DH1NOC Shack Clock - Precision NTP-synchronized clock for Raspberry Pi Pico W
-Version: 1.5 (Clean Code Refactored)
+Version: 2.0 (Clean Code Refactored)
 Author: DH1NOC
 Features: GPS (Priority 1), NTP (Priority 2), RTC Fallback (Priority 3)
 """

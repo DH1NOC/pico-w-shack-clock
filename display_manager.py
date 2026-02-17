@@ -57,7 +57,7 @@ class DisplayManager:
         self.lcd.move_to(3, 3)
         self.lcd.putstr("System Start...")
         self.lcd.move_to(4, 2)
-        self.lcd.putstr("Version  1.4")
+        self.lcd.putstr("Version  2.0")
 
         self._animate_radio_waves()
         time.sleep(1.5)
