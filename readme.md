@@ -136,6 +136,8 @@ Mehrere Netzwerke können als Fallback hinterlegt werden.
 
 ![System im Betrieb](system_running.png)
 
+![System im Betrieb mit GPS-Sync](system_running_gps.png)
+
 1. **Start:** Strom anschließen (USB).
 2. **Boot:** Die "DH1NOC CLOCK" Animation läuft (Sendemast strahlt Wellen ab).
 3. **Betrieb:**
