@@ -1,266 +1,186 @@
-import machine
+"""
+DH1NOC Shack Clock - Precision NTP-synchronized clock for Raspberry Pi Pico W
+Version: 1.5 (Clean Code Refactored)
+Author: DH1NOC
+Features: GPS (Priority 1), NTP (Priority 2), RTC Fallback (Priority 3)
+"""
+
 import time
 import json
-import network
-import usocket
-import ustruct
-from machine import I2C, Pin
-from pico_i2c_lcd import I2cLcd
+from config import Config
+from hardware_manager import HardwareManager
+from time_synchronizer import TimeSynchronizer
+from wifi_manager import WifiManager
+from time_utils import TimeUtilities
 
-# --- KONFIGURATION ---
-I2C_ADDR = 0x27        
-DS3231_ADDR = 0x68     
-I2C_NUM = 0
-I2C_SDA = 0
-I2C_SCL = 1
-LCD_ROWS = 4
-LCD_COLS = 20
 
-WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+class ShackClock:
+    """Main application controller for precision timekeeping"""
 
-# --- DS3231 TREIBER ---
-class DS3231:
-    def __init__(self, i2c):
-        self.i2c = i2c
-        self.addr = DS3231_ADDR
-    def _dec2bcd(self, val): return (val // 10 * 16) + (val % 10)
-    def _bcd2dec(self, val): return (val // 16 * 10) + (val % 16)
-    def get_time(self):
+    DISPLAY_UPDATE_INTERVAL_MS = 1000
+    DISPLAY_UPDATE_INTERVAL_DEBUG_MS = 200
+    GPS_POLL_INTERVAL_MS = 10
+    MAIN_LOOP_SLEEP_MS = 20
+
+    def __init__(self):
+        self.config = self._load_configuration()
+        self.debug_mode = self.config.get('debug_mode', Config.DEBUG_MODE)
+        self.animation_counter = 0
+        self.last_second = -1
+
+        self._initialize_hardware()
+        self._initialize_network()
+        self._initialize_time_sync()
+
+        if self.hardware.display:
+            self.hardware.display.lcd.clear()
+
+    def _load_configuration(self):
+        """Load configuration from config.json"""
         try:
-            data = self.i2c.readfrom_mem(self.addr, 0, 7)
-            ss, mm, hh = self._bcd2dec(data[0]), self._bcd2dec(data[1]), self._bcd2dec(data[2])
-            wday, mday, mon = self._bcd2dec(data[3]), self._bcd2dec(data[4]), self._bcd2dec(data[5] & 0x1F)
-            year = self._bcd2dec(data[6]) + 2000
-            return (year, mon, mday, hh, mm, ss, wday - 1, 0)
-        except: return None
-    def set_time(self, t):
-        try:
-            data = bytearray(7)
-            data[0], data[1], data[2] = self._dec2bcd(t[5]), self._dec2bcd(t[4]), self._dec2bcd(t[3])
-            data[3], data[4], data[5] = self._dec2bcd(t[6] + 1), self._dec2bcd(t[2]), self._dec2bcd(t[1])
-            data[6] = self._dec2bcd(t[0] - 2000)
-            self.i2c.writeto_mem(self.addr, 0, data)
-        except: pass
+            with open('config.json', 'r') as f:
+                return json.load(f)
+        except Exception:
+            return self._get_default_config()
 
-# --- NTP CLIENT ---
-def get_ntp_time_precision(host="pool.ntp.org"):
-    NTP_DELTA = 2208988800
-    NTP_QUERY = bytearray(48)
-    NTP_QUERY[0] = 0x1B
-    
-    try:
-        addr = usocket.getaddrinfo(host, 123)[0][-1]
-        s = usocket.socket(usocket.AF_INET, usocket.SOCK_DGRAM)
-        s.settimeout(1) 
-        
-        ticks_start = time.ticks_ms()
-        s.sendto(NTP_QUERY, addr)
-        msg = s.recv(48)
-        ticks_end = time.ticks_ms()
-        s.close()
-        
-        latency_ms = time.ticks_diff(ticks_end, ticks_start)
-    except:
-        return None, None, 0
+    def _get_default_config(self):
+        """Provide default configuration if file is missing"""
+        return {
+            "wifi": [],
+            "ntp_server": Config.DEFAULT_NTP_SERVER,
+            "sync_interval_min": Config.DEFAULT_SYNC_INTERVAL_MIN,
+            "gps_enabled": Config.GPS_ENABLED,
+            "debug_mode": Config.DEBUG_MODE
+        }
 
-    val = ustruct.unpack("!I", msg[40:44])[0]
-    frac = ustruct.unpack("!I", msg[44:48])[0]
-    
-    t_seconds = val - NTP_DELTA
-    t_ms = int((frac / 4294967296) * 1000)
-    
-    return t_seconds, t_ms, (latency_ms // 2)
+    def _initialize_hardware(self):
+        """Initialize all hardware components"""
+        self.hardware = HardwareManager(self.config)
+        self.hardware.initialize_all()
 
-# --- HELFER ---
-def load_config():
-    try:
-        with open('config.json', 'r') as f: return json.load(f)
-    except: return {"wifi": [], "ntp_server": "pool.ntp.org", "sync_interval_min": 60}
+    def _initialize_network(self):
+        """Initialize WiFi connection"""
+        self.wifi = WifiManager()
+        wifi_networks = self.config.get('wifi', [])
 
-def connect_wifi_bg(config):
-    """Verbindet im Hintergrund (Feuer & Vergessen)"""
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    if wlan.isconnected(): return wlan
-    try: wlan.config(pm=0xa11140)
-    except: pass
-    if len(config['wifi']) > 0:
-        try:
-            if not wlan.isconnected():
-                wlan.connect(config['wifi'][0]['ssid'], config['wifi'][0]['password'])
-        except: pass
-    return wlan
+        if len(wifi_networks) > 0:
+            first_network = wifi_networks[0]
+            self.wifi.connect(first_network['ssid'], first_network['password'])
 
-def get_cet_time_and_dst(utc_time):
-    year, month, mday, hour = utc_time[0], utc_time[1], utc_time[2], utc_time[3]
-    
-    def last_sunday(m, y):
-        import time
-        last_day_wday = time.gmtime(time.mktime((y, m, 31, 12, 0, 0, 0, 0)))[6]
-        return 31 - ((last_day_wday + 1) % 7)
+    def _initialize_time_sync(self):
+        """Initialize time synchronization coordinator"""
+        self.time_sync = TimeSynchronizer(
+            self.hardware.get_gps(),
+            self.hardware.get_ntp(),
+            self.hardware.get_rtc(),
+            self.hardware.get_display()
+        )
 
-    dst_start = last_sunday(3, year)
-    dst_end = last_sunday(10, year)
+        sync_interval = self.config.get('sync_interval_min', Config.DEFAULT_SYNC_INTERVAL_MIN)
+        self.time_sync.set_ntp_interval(sync_interval)
+        self.time_sync.load_rtc_time()
 
-    is_dst = False
-    if month > 3 and month < 10: is_dst = True
-    elif month == 3:
-        if mday > dst_start: is_dst = True
-        elif mday == dst_start and hour >= 1: is_dst = True
-    elif month == 10:
-        if mday < dst_end: is_dst = True
-        elif mday == dst_end and hour < 1: is_dst = True
+    def _update_display(self):
+        """Update display based on current mode"""
+        if not self.hardware.display:
+            return
 
-    offset = 2 if is_dst else 1
-    unixtime = time.mktime(utc_time) + (offset * 3600)
-    return time.gmtime(unixtime), is_dst
+        if self._is_debug_mode():
+            self._show_debug_screen()
+        else:
+            self._show_normal_screen()
 
-# --- BOOT ANIMATION HELFER ---
-def define_char(lcd, location, charmap):
-    location &= 0x7
-    lcd.hal_write_command(lcd.LCD_CGRAM | (location << 3))
-    time.sleep_ms(1)
-    for i in range(8):
-        lcd.hal_write_data(charmap[i])
-        time.sleep_ms(1)
-    lcd.move_to(lcd.cursor_x, lcd.cursor_y)
+    def _is_debug_mode(self):
+        """Check if debug mode is active"""
+        return self.debug_mode == Config.DEBUG_MODE_GPS
 
-def boot_animation(lcd):
-    """Zeigt eine kurze Funkwellen-Animation (Abstrahlend)"""
-    tower = bytearray([0x04, 0x0E, 0x0E, 0x04, 0x04, 0x04, 0x1F, 0x00])
-    w_r1 = bytearray([0x00, 0x04, 0x02, 0x02, 0x02, 0x04, 0x00, 0x00])
-    w_r2 = bytearray([0x00, 0x11, 0x08, 0x08, 0x08, 0x11, 0x00, 0x00])
-    w_r3 = bytearray([0x00, 0x11, 0x0A, 0x04, 0x04, 0x0A, 0x11, 0x00])
-    w_l1 = bytearray([0x00, 0x04, 0x08, 0x08, 0x08, 0x04, 0x00, 0x00])
-    w_l2 = bytearray([0x00, 0x11, 0x22, 0x22, 0x22, 0x11, 0x00, 0x00])
-    w_l3 = bytearray([0x00, 0x11, 0x0A, 0x04, 0x04, 0x0A, 0x11, 0x00])
+    def _show_debug_screen(self):
+        """Display GPS debug information"""
+        gps = self.hardware.get_gps()
+        gps_status = gps.get_status() if gps else None
+        self.hardware.display.show_gps_debug(gps_status, self.animation_counter)
+        self.animation_counter += 1
 
-    define_char(lcd, 0, tower)
-    define_char(lcd, 1, w_r1)
-    define_char(lcd, 2, w_r2)
-    define_char(lcd, 3, w_r3)
-    define_char(lcd, 4, w_l1)
-    define_char(lcd, 5, w_l2)
-    define_char(lcd, 6, w_l3)
+    def _show_normal_screen(self):
+        """Display normal time screen"""
+        utc_time = time.gmtime()
+        local_time, is_dst = TimeUtilities.get_cet_time_and_dst(utc_time)
 
-    lcd.clear()
-    lcd.move_to(5, 0); lcd.putstr("DARC CLOCK")
-    lcd.move_to(3, 3); lcd.putstr("System Start...")
-    
-    center = 9
-    lcd.move_to(center, 1); lcd.putchar(chr(0)) 
-    time.sleep(0.5)
-    
-    lcd.move_to(center-1, 1); lcd.putchar(chr(4))
-    lcd.move_to(center+1, 1); lcd.putchar(chr(1))
-    time.sleep(0.3)
+        gps = self.hardware.get_gps()
+        gps_status = gps.get_status() if gps else None
+        time_source = self.time_sync.get_current_source()
 
-    lcd.move_to(center-2, 1); lcd.putchar(chr(5))
-    lcd.move_to(center+2, 1); lcd.putchar(chr(2))
-    time.sleep(0.3)
-    
-    lcd.move_to(center-3, 1); lcd.putchar(chr(6))
-    lcd.move_to(center+3, 1); lcd.putchar(chr(3))
-    
-    time.sleep(1.5)
-    lcd.clear()
+        self.hardware.display.update_time_display(
+            local_time, utc_time, is_dst, time_source, gps_status
+        )
 
-# --- SETUP ---
-i2c = I2C(I2C_NUM, sda=Pin(I2C_SDA), scl=Pin(I2C_SCL), freq=100000)
+    def run(self):
+        """Main application loop with time synchronization and display updates"""
+        update_interval = self._get_display_update_interval()
+        last_display_update = 0
 
-try:
-    lcd = I2cLcd(i2c, I2C_ADDR, LCD_ROWS, LCD_COLS)
-    boot_animation(lcd)
-except: pass
+        while True:
+            self._poll_gps()
 
-rtc_mod = DS3231(i2c)
-config = load_config()
+            now_ms = time.ticks_ms()
 
-# RTC Zeit lesen (Sofort verfügbar)
-try:
-    ds_t = rtc_mod.get_time()
-    if ds_t: machine.RTC().datetime((ds_t[0], ds_t[1], ds_t[2], ds_t[6], ds_t[3], ds_t[4], ds_t[5], 0))
-except: pass
+            if self._is_debug_mode():
+                last_display_update = self._run_debug_mode(now_ms, last_display_update, update_interval)
+                continue
 
-# WLAN im Hintergrund anstoßen (Kein Warten!)
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-if len(config['wifi']) > 0:
-    try:
-        wlan.config(pm=0xa11140) # Power Management aus
-        # connect() ist bei Pico W non-blocking, wenn wir nicht auf Status warten
-        wlan.connect(config['wifi'][0]['ssid'], config['wifi'][0]['password'])
-    except: pass
+            self._run_normal_mode()
+            time.sleep_ms(self.MAIN_LOOP_SLEEP_MS)
 
-lcd.clear()
+    def _get_display_update_interval(self):
+        """Get display update interval based on mode"""
+        if self._is_debug_mode():
+            return self.DISPLAY_UPDATE_INTERVAL_DEBUG_MS
+        return self.DISPLAY_UPDATE_INTERVAL_MS
 
-# Variablen
-last_sync_ts = -999999
-sync_interval = config.get("sync_interval_min", 60) * 60
-last_wifi_retry = time.time()
-last_second_tick = time.gmtime()[5]
+    def _poll_gps(self):
+        """Poll GPS UART to prevent buffer overflow"""
+        gps = self.hardware.get_gps()
+        if gps:
+            gps.update()
 
-# --- LOOP ---
-while True:
-    current_t_utc = time.gmtime()
-    current_sec = current_t_utc[5]
+    def _run_debug_mode(self, now_ms, last_update, interval):
+        """Run debug mode loop iteration
 
-    if current_sec == last_second_tick:
-        time.sleep_ms(10)
-        continue
-    
-    last_second_tick = current_sec
-    local_t, is_dst = get_cet_time_and_dst(current_t_utc)
-    wday_str = WEEKDAYS[local_t[6]] if 0 <= local_t[6] <= 6 else "--"
-    
-    if is_dst: label_loc, label_utc = "MESZ:", "UTC: "
-    else:      label_loc, label_utc = "MEZ: ", "UTC: "
+        Returns:
+            int: Updated last_display_update timestamp
+        """
+        if time.ticks_diff(now_ms, last_update) >= interval:
+            self._update_display()
+            last_update = now_ms
 
-    # Anzeige
-    lcd.move_to(0, 0)
-    lcd.putstr("{:s} {:02d}.{:02d}.{:04d}".format(wday_str, local_t[2], local_t[1], local_t[0]))
-    lcd.move_to(16, 0); lcd.putstr("DARC")
-    
-    lcd.move_to(0, 1)
-    lcd.putstr("{:s} {:02d}:{:02d}.{:02d}    ".format(label_loc, local_t[3], local_t[4], local_t[5]))
-    
-    lcd.move_to(0, 2)
-    lcd.putstr("{:s} {:02d}:{:02d}       ".format(label_utc, current_t_utc[3], current_t_utc[4]))
-    
-    lcd.move_to(0, 3)
-    if wlan.isconnected():
-        src_str = "WLAN"
-    else:
-        src_str = "RTC "
-    lcd.putstr("T-Sync over: {:s}  ".format(src_str))
+        time.sleep_ms(self.GPS_POLL_INTERVAL_MS)
+        return last_update
 
-    # Tasks
-    now = time.time()
-    
-    # Retry wenn WLAN weg ist (alle 5 min)
-    if not wlan.isconnected() and (now - last_wifi_retry) > 300:
-        last_wifi_retry = now
-        connect_wifi_bg(config)
+    def _run_normal_mode(self):
+        """Run normal mode loop iteration"""
+        current_second = time.gmtime()[5]
 
-    # NTP Sync (nur wenn verbunden)
-    if wlan.isconnected():
-        if (now - last_sync_ts) > sync_interval:
-            try:
-                lcd.move_to(19, 3); lcd.putstr("*")
-                ntp_sec, ntp_ms, latency_comp = get_ntp_time_precision(config['ntp_server'])
-                if ntp_sec is not None:
-                    total_ms = ntp_ms + latency_comp
-                    if total_ms >= 1000:
-                        ntp_sec += 1
-                        total_ms -= 1000
-                    
-                    if total_ms >= 500: sec_to_set = ntp_sec + 1
-                    else:               sec_to_set = ntp_sec
-                    
-                    tm = time.gmtime(sec_to_set)
-                    machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6], tm[3], tm[4], tm[5], 0))
-                    rtc_mod.set_time(tm)
-                    last_sync_ts = time.time()
-                lcd.move_to(19, 3); lcd.putstr(" ")
-            except:
-                lcd.move_to(19, 3); lcd.putstr("E")
+        if current_second != self.last_second:
+            self.last_second = current_second
+            self._update_display()
+            self._maintain_network()
+            self._synchronize_time()
+
+    def _maintain_network(self):
+        """Maintain WiFi connection"""
+        wifi_networks = self.config.get('wifi', [])
+        self.wifi.retry_if_needed(wifi_networks)
+
+    def _synchronize_time(self):
+        """Execute time synchronization"""
+        self.time_sync.synchronize()
+
+
+def main():
+    """Application entry point"""
+    clock = ShackClock()
+    clock.run()
+
+
+if __name__ == "__main__":
+    main()

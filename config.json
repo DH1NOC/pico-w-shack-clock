@@ -10,5 +10,6 @@
         }
     ],
     "ntp_server": "pool.ntp.org",
-    "sync_interval_min": 60
+    "sync_interval_min": 60,
+    "callsign": "DH1NOC"
 }
