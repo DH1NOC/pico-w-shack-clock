@@ -159,22 +159,58 @@ Mehrere Netzwerke können als Fallback hinterlegt werden.
 
 ---
 
-## Rechtliche Hinweise / Haftungsausschluss
+# Lizenz des Projekts
 
-**1. Haftungsausschluss**
-Die Inhalte dieses Projekts wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte, Schaltpläne und Software kann jedoch keine Gewähr übernommen werden.
+CC-BY-4.0
 
-**2. Ausschluss der Gewährleistung**
-Die Software und die Hardware-Dokumentation werden "wie besehen" (as is) ohne jegliche explizite oder implizite Gewährleistung bereitgestellt, einschließlich, aber nicht beschränkt auf die Gewährleistung der Marktgängigkeit oder der Eignung für einen bestimmten Zweck.
+---
 
-**3. Haftungsbeschränkung**
-Der Autor übernimmt keine Haftung für Schäden, die durch den Nachbau, die Nutzung oder die Unmöglichkeit der Nutzung der hier bereitgestellten Informationen, Software oder Hardware entstehen. Dies gilt insbesondere für Schäden an Hardware (z.B. Raspberry Pi Pico, Sensoren, etc.), Datenverlust oder sonstige direkte oder indirekte Schäden.
+# Haftungsausschluss / Nutzung auf eigene Gefahr
 
-**4. Sicherheitswarnung und Verzicht auf Nachbau**
-Der Nachbau und Betrieb dieses Projekts erfolgen ausdrücklich auf eigene Gefahr.
-**Sollte beim Nachbau oder Betrieb die Unversehrtheit von Personen (Gesundheit) oder Geräten nicht zweifelsfrei gewährleistet sein, oder fehlen Ihnen die notwendigen Fachkenntnisse für einen sicheren Umgang mit der Elektronik, wird ausdrücklich vom Nachbau und der Nutzung dieses Projekts abgeraten.**
+Dieses Projekt wird ausschließlich zu Informations- und
+Demonstrationszwecken bereitgestellt. Es handelt sich um ein
+experimentelles Hobby- bzw. Entwicklungsprojekt und ausdrücklich **nicht
+um ein geprüftes oder für den praktischen Einsatz geeignetes Produkt**.
 
-Der Nutzer ist allein dafür verantwortlich, sicherzustellen, dass der Aufbau und Betrieb den geltenden gesetzlichen Bestimmungen und Sicherheitsvorschriften entsprechen.
+Der Nachbau und die Nutzung erfolgen ausschließlich auf eigene
+Verantwortung und Gefahr des Nutzers. Der Autor übernimmt keine Gewähr
+für die Richtigkeit, Vollständigkeit, Funktionsfähigkeit oder Sicherheit
+der bereitgestellten Informationen, Schaltungen, Software oder sonstigen
+Inhalte.
 
-**6. Salvatorische Klausel**
-Sollten einzelne Bestimmungen dieses Haftungsausschlusses unwirksam oder undurchführbar sein oder werden, bleibt davon die Wirksamkeit des Haftungsausschlusses im Übrigen unberührt.
+## Haftung
+
+Der Autor haftet --- gleich aus welchem Rechtsgrund --- nur bei Vorsatz
+oder grober Fahrlässigkeit.\
+Bei einfacher Fahrlässigkeit haftet der Autor nur für Schäden aus der
+Verletzung von Leben, Körper oder Gesundheit.
+
+Eine Haftung für Sachschäden, Vermögensschäden, Folgeschäden,
+Produktionsausfälle, Datenverluste oder sonstige mittelbare Schäden ist
+--- soweit gesetzlich zulässig --- ausgeschlossen.
+
+## Fachkenntnisse erforderlich
+
+Dieses Projekt richtet sich ausschließlich an Personen mit ausreichenden
+Fachkenntnissen im Umgang mit Elektronik, elektrischen Anlagen und den
+einschlägigen Sicherheitsvorschriften. Der Nutzer ist selbst
+verantwortlich für die Einhaltung aller gesetzlichen Bestimmungen,
+Normen und Sicherheitsanforderungen.
+
+## Keine Produkthaftung
+
+Es wird kein Produkt, keine Baugruppe und keine technische Lösung im
+Sinne eines marktreifen Systems bereitgestellt. Es besteht kein
+Vertragsverhältnis zwischen Autor und Nutzer.
+
+## Sicherheitswarnung
+
+Der Aufbau und Betrieb elektronischer Schaltungen kann zu Sachschäden,
+Brand, elektrischem Schlag oder anderen Gefahren führen. Der Nachbau
+darf nur erfolgen, wenn die sichere Funktion zweifelsfrei gewährleistet
+werden kann.
+
+## Salvatorische Klausel
+
+Sollte eine Bestimmung dieses Haftungsausschlusses unwirksam sein oder
+werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.
