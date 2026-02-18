@@ -162,6 +162,7 @@ Mehrere Netzwerke können als Fallback hinterlegt werden.
 # Lizenz des Projekts
 
 CC-BY-4.0
+Dieses Projekt ist unter der [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/deed.de) Lizenz lizenziert.
 
 ---
 
