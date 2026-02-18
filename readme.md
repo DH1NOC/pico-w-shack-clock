@@ -180,11 +180,6 @@ Inhalte.
 
 ## Haftung
 
-Der Autor haftet --- gleich aus welchem Rechtsgrund --- nur bei Vorsatz
-oder grober Fahrlässigkeit.\
-Bei einfacher Fahrlässigkeit haftet der Autor nur für Schäden aus der
-Verletzung von Leben, Körper oder Gesundheit.
-
 Eine Haftung für Sachschäden, Vermögensschäden, Folgeschäden,
 Produktionsausfälle, Datenverluste oder sonstige mittelbare Schäden ist
 --- soweit gesetzlich zulässig --- ausgeschlossen.
