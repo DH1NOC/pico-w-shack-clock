@@ -73,7 +73,8 @@ class ShackClock:
             self.hardware.get_gps(),
             self.hardware.get_ntp(),
             self.hardware.get_rtc(),
-            self.hardware.get_display()
+            self.hardware.get_display(),
+            self.wifi
         )
 
         sync_interval = self.config.get('sync_interval_min', Config.DEFAULT_SYNC_INTERVAL_MIN)

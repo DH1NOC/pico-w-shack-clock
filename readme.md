@@ -156,3 +156,25 @@ Mehrere Netzwerke können als Fallback hinterlegt werden.
 * **Leeres Display:** Kontrast am blauen Potentiometer des I2C-Backpacks (Rückseite Display) justieren.
 * **Kryptische Zeichen:** Pico kurz komplett stromlos machen (Hard Reset).
 * **Falsche Stunde:** Die Zeitzone ist auf Deutschland fest voreingestellt. Prüfe die Funktion `get_cet_time_and_dst` in der `main.py`.
+
+---
+
+## Rechtliche Hinweise / Haftungsausschluss
+
+**1. Haftungsausschluss**
+Die Inhalte dieses Projekts wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte, Schaltpläne und Software kann jedoch keine Gewähr übernommen werden.
+
+**2. Ausschluss der Gewährleistung**
+Die Software und die Hardware-Dokumentation werden "wie besehen" (as is) ohne jegliche explizite oder implizite Gewährleistung bereitgestellt, einschließlich, aber nicht beschränkt auf die Gewährleistung der Marktgängigkeit oder der Eignung für einen bestimmten Zweck.
+
+**3. Haftungsbeschränkung**
+Der Autor übernimmt keine Haftung für Schäden, die durch den Nachbau, die Nutzung oder die Unmöglichkeit der Nutzung der hier bereitgestellten Informationen, Software oder Hardware entstehen. Dies gilt insbesondere für Schäden an Hardware (z.B. Raspberry Pi Pico, Sensoren, etc.), Datenverlust oder sonstige direkte oder indirekte Schäden.
+
+**4. Sicherheitswarnung und Verzicht auf Nachbau**
+Der Nachbau und Betrieb dieses Projekts erfolgen ausdrücklich auf eigene Gefahr.
+**Sollte beim Nachbau oder Betrieb die Unversehrtheit von Personen (Gesundheit) oder Geräten nicht zweifelsfrei gewährleistet sein, oder fehlen Ihnen die notwendigen Fachkenntnisse für einen sicheren Umgang mit der Elektronik, wird ausdrücklich vom Nachbau und der Nutzung dieses Projekts abgeraten.**
+
+Der Nutzer ist allein dafür verantwortlich, sicherzustellen, dass der Aufbau und Betrieb den geltenden gesetzlichen Bestimmungen und Sicherheitsvorschriften entsprechen.
+
+**6. Salvatorische Klausel**
+Sollten einzelne Bestimmungen dieses Haftungsausschlusses unwirksam oder undurchführbar sein oder werden, bleibt davon die Wirksamkeit des Haftungsausschlusses im Übrigen unberührt.

@@ -10,12 +10,13 @@ from time_utils import TimeUtilities
 
 class TimeSynchronizer:
     """Coordinate time synchronization from GPS, NTP, and RTC sources"""
-    
-    def __init__(self, gps, ntp, rtc, display):
+
+    def __init__(self, gps, ntp, rtc, display, wifi=None):
         self.gps = gps
         self.ntp = ntp
         self.rtc = rtc
         self.display = display
+        self.wifi = wifi
         
         self.last_gps_sync = -999999
         self.last_ntp_sync = -999999
@@ -98,13 +99,17 @@ class TimeSynchronizer:
         """Try synchronizing with NTP (second priority)"""
         if self._gps_has_priority():
             return False
-            
+
         if not self._should_sync_ntp():
             return False
-            
+
+        # Check WiFi connection before attempting NTP sync
+        if self.wifi and not self.wifi.is_connected():
+            return False
+
         try:
             self._show_sync_indicator("*")
-            
+
             ntp_sec, ntp_ms, latency, tick_ref = self.ntp.get_precise_time()
             
             if ntp_sec is not None:
